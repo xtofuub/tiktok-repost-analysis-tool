@@ -26,7 +26,8 @@ The dashboard is lightweight, mobile-responsive, and built with **TailwindCSS** 
 ---
 
 ## 🚀 Live Demo
-https://github.com/user-attachments/assets/263433e0-8f3e-47e5-8cb4-77b746ef7f4d
+
+https://github.com/user-attachments/assets/af5cb418-af77-4b16-83ce-20b0aa1c8131
 
 
 
