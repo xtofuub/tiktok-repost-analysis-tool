@@ -44,7 +44,6 @@ https://github.com/user-attachments/assets/af5cb418-af77-4b16-83ce-20b0aa1c8131
 
 ## 📦 Getting Started
 
-### 1. Clone repository
-```bash
-git clone https://github.com/USERNAME/REPO.git
-cd REPO
+clone the repo
+open it in browser
+done.
