@@ -79,6 +79,20 @@
 
     .cover-img{width:120px;height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--glass-border);flex:0 0 auto}
 
+    /* Prevent flex children from overflowing and ensure proper wrapping on small screens */
+    .flex-1{min-width:0}
+
+    /* Repost card: make responsive and stack on narrow viewports to avoid overlap */
+    #repostList article{display:flex;align-items:flex-start;gap:1rem}
+    @media (max-width:640px){
+      #repostList article{flex-direction:column;align-items:stretch}
+      #repostList article .cover-img{width:100%;height:auto;aspect-ratio:3/2}
+      #repostList article .flex-1{width:100%}
+      #repostList article .text-right{margin-top:.6rem;text-align:left}
+      /* make internal stats grid adapt without overflowing */
+      #repostList article .grid.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+    }
+
     .muted{color:var(--muted);font-size:.9rem}
 
     ::-webkit-scrollbar{height:9px;width:9px}
@@ -128,10 +142,10 @@
       .max-w-7xl{padding-left:12px;padding-right:12px}
     }
 
-    /* Make the username + fetch controls more compact on small screens
+     /* Make the username + fetch controls more compact on small screens
        - stack input + button vertically
        - make button full width and slightly smaller padding
-    */
+     */
     #singleControls{display:flex;gap:.5rem}
     @media (max-width:520px){
       #singleControls{flex-direction:column}
@@ -161,6 +175,14 @@
 
     /* Slightly stronger inner outline for cards for separation */
     .glass{box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.02)}
+    
+      /* Noticeable, dismissible disclaimer pill */
+      .disclaimer{display:inline-flex;align-items:center;gap:.5rem;padding:.45rem .7rem;border-radius:10px;font-size:.9rem;background:rgba(255,42,109,0.08);border:1px solid rgba(255,42,109,0.15);color:var(--text)}
+      .disclaimer .disclaimer-icon{font-size:1rem;opacity:.95}
+      .disclaimer .disclaimer-text{color:var(--text)}
+      .disclaimer .close-btn{margin-left:.5rem;background:transparent;border:0;color:var(--muted);cursor:pointer;padding:.2rem .4rem;border-radius:6px}
+      .disclaimer .close-btn:focus{outline:2px solid rgba(255,255,255,0.06);outline-offset:2px}
+      [data-theme="light"] .disclaimer{background:rgba(13,110,253,0.08);border-color:rgba(13,110,253,0.12)}
 
   </style>
 </head>
@@ -215,6 +237,11 @@
             </div>
           </div>
           <div id="quota" class="mt-3 muted text-xs"></div>
+          <div id="publicDisclaimer" class="disclaimer mt-2" role="status" aria-live="polite">
+            <span class="disclaimer-icon" aria-hidden="true">ℹ️</span>
+            <span class="disclaimer-text">Note: This tool only works with public TikTok profiles.</span>
+            <button id="dismissDisclaimer" class="close-btn" aria-label="Dismiss disclaimer">✕</button>
+          </div>
         </div>
 
         <!-- Summary Stats -->
@@ -255,10 +282,12 @@
         <!-- Word Cloud -->
         <div id="wordCloudCard" class="glass p-5 rounded-xl hidden">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white">Word Cloud</h3>
+            <h3 class="font-semibold text-white">Word Cloud
+              <span id="wcHint" class="muted text-xs ml-2">Tap or hover to view count</span>
+            </h3>
             <div class="muted text-xs">Top tags</div>
           </div>
-          <div id="wordCloud" class="word-cloud"></div>
+          <div id="wordCloud" class="word-cloud" aria-describedby="wcHint"></div>
         </div>
 
         <!-- Top Authors -->
@@ -364,6 +393,7 @@
     <!-- Footer -->
     <footer class="mt-auto pt-6 border-t border-[#1a1a1a] text-center muted text-xs">
       <div>Uses <span class="badge">corsproxy.io</span> by default. Replace `proxy` variable in JS with your own proxy for production.</div>
+      <div class="mt-2">Note: The tool can only fetch data from public TikTok profiles.</div>
     </footer>
   </div>
 
@@ -1141,6 +1171,22 @@ themeToggle && themeToggle.addEventListener('click', ()=>{
   applyTheme(current === 'dark' ? 'light' : 'dark');
 });
 initTheme();
+
+/* Disclaimer dismissal handling: persist user choice to hide */
+(function(){
+  const publicDisclaimer = document.getElementById('publicDisclaimer');
+  const dismissBtn = document.getElementById('dismissDisclaimer');
+  try{
+    const hidden = localStorage.getItem('hidePublicDisclaimer') === '1';
+    if(publicDisclaimer && hidden) publicDisclaimer.style.display = 'none';
+  }catch(e){}
+  if(dismissBtn){
+    dismissBtn.addEventListener('click', ()=>{
+      if(publicDisclaimer) publicDisclaimer.style.display = 'none';
+      try{ localStorage.setItem('hidePublicDisclaimer','1'); }catch(e){}
+    });
+  }
+})();
 
 /* Attach events */
 fetchBtn.addEventListener('click', () => {
