@@ -13,191 +13,155 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    :root{
+      /* Dark (default) - made deeper per request */
+      --bg: #050505;
+      --card: #070707;
+      --text: #efefef;
+      --muted: #8f8f8f;
+      --accent: #ff2a6d;
+      --glass-border: rgba(255,255,255,0.06); /* stronger by default */
+      --shadow: 0 10px 40px rgba(0,0,0,0.75);
+      --control-bg: #070707;
+      --focus-outline: rgba(255,255,255,0.12);
     }
 
-    body {
-      background: #000000;
+    /* Light theme overrides */
+    [data-theme="light"]{
+      --bg: #ffffff;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #666666;
+      --accent: #0d6efd;
+      --glass-border: rgba(0,0,0,0.06);
+      --shadow: 0 6px 20px rgba(0,0,0,0.06);
+      --control-bg: #f6f6f7;
+    }
+
+    /* Respect user preference on first load */
+    @media (prefers-color-scheme: light){
+      :root:not([data-theme]){ --bg: #ffffff; --card:#ffffff; --text:#111; --muted:#666; --accent:#0d6efd; --glass-border: rgba(0,0,0,0.06); --control-bg:#f6f6f7 }
+    }
+
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      -webkit-tap-highlight-color:transparent;
+      line-height:1.5;
+    }
+
+    /* cards */
+    .glass{
+      background:var(--card);
+      border:1px solid var(--glass-border);
+      box-shadow:var(--shadow);
+      /* subtle inner ring for stronger separation on very dark backgrounds */
+      box-shadow: var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.01);
+      transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease,background .18s ease;
+    }
+    .glass:hover{ transform:translateY(-4px) }
+
+    .word-cloud{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+
+    .word-tooltip{
+      position:absolute;bottom:100%;left:50%;transform:translateX(-50%) scale(.92);
+      margin-bottom:.5rem;padding:.35rem .8rem;border-radius:8px;font-weight:700;font-size:.95rem;
+      background:rgba(0,0,0,0.7);color:var(--text);border:1px solid rgba(255,255,255,0.04);white-space:nowrap;opacity:0;pointer-events:none;transition:all .16s ease;z-index:900
+    }
+    .word-tooltip.active{opacity:1;transform:translateX(-50%) scale(1)}
+    .word-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border-left:7px solid transparent;border-right:7px solid transparent;border-top:8px solid rgba(0,0,0,0.7)}
+
+    .cover-img{width:120px;height:160px;object-fit:cover;border-radius:12px;border:1px solid var(--glass-border);flex:0 0 auto}
+
+    .muted{color:var(--muted);font-size:.9rem}
+
+    ::-webkit-scrollbar{height:9px;width:9px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.35);border-radius:8px}
+
+    .item-hover{transition:all .18s ease}
+    .item-hover:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,0.45)}
+
+    .caption{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis}
+
+    .badge{background:transparent;color:var(--muted);padding:6px 10px;border-radius:8px;border:1px solid var(--glass-border);font-weight:600;font-size:.8rem}
+
+    /* Controls */
+    input,select,textarea,button{font-family:inherit}
+    input,select,textarea{background:var(--control-bg);border:1px solid var(--glass-border);color:var(--text);padding:.6rem .9rem;border-radius:10px;transition:box-shadow .15s ease,border-color .15s ease}
+    input:focus,select:focus,textarea:focus{outline:none;box-shadow:0 0 0 4px rgba(13,110,253,0.06);border-color:var(--accent)}
+
+    button{background:transparent;border:1px solid var(--glass-border);color:var(--text);padding:.6rem .9rem;border-radius:10px;cursor:pointer;min-height:44px;min-width:44px}
+    button:hover{transform:translateY(-2px);filter:brightness(.98)}
+    button:active{transform:translateY(0)}
+    button[disabled]{opacity:.5;cursor:not-allowed}
+
+    /* Prominent primary fetch button for visibility in dark theme */
+    #fetchBtn{
+      background:var(--accent);
       color: #ffffff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
+      border: 0.5px solid rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.25) inset;
+      font-weight:700;
+      transition:transform .12s ease,filter .12s ease,box-shadow .12s ease;
+    }
+    #fetchBtn:hover{ filter:brightness(.98); transform:translateY(-2px); box-shadow:0 10px 30px rgba(0,0,0,0.55) }
+    #fetchBtn:active{ transform:translateY(0) ; box-shadow:0 6px 18px rgba(0,0,0,0.5) }
+    #fetchBtn:focus-visible{ outline:3px solid rgba(255,255,255,0.08); outline-offset:3px }
+
+    /* Slightly different accent in light theme for contrast */
+    [data-theme="light"] #fetchBtn{ background:var(--accent); color:#fff; box-shadow:0 6px 18px rgba(13,110,253,0.12) }
+
+    .mode-switch{display:inline-flex;border-radius:9999px;overflow:hidden;border:1px solid var(--glass-border);background:var(--control-bg)}
+    .mode-btn{padding:6px 10px;font-size:.78rem;font-weight:700;color:var(--muted);background:transparent;border:0}
+    .mode-btn.active{color:var(--text);background:rgba(255,255,255,0.03)}
+
+    /* Responsive helpers */
+    @media (max-width:640px){
+      .cover-img{width:96px;height:128px}
+      .max-w-7xl{padding-left:12px;padding-right:12px}
     }
 
-    /* Dark card styling */
-    .glass {
-      background: #0a0a0a;
-      border: 1px solid #1a1a1a;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-      transition: all 0.3s ease;
+    /* Make the username + fetch controls more compact on small screens
+       - stack input + button vertically
+       - make button full width and slightly smaller padding
+    */
+    #singleControls{display:flex;gap:.5rem}
+    @media (max-width:520px){
+      #singleControls{flex-direction:column}
+      #singleControls input,#singleControls #username{width:100%}
+      #singleControls button,#fetchBtn{width:100%;padding:.55rem .7rem;font-size:.95rem}
     }
 
-    .glass:hover {
-      border-color: #2a2a2a;
-      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.9);
+    @media (min-width:1024px){
+      .cover-img{width:140px;height:190px}
     }
 
-    /* word cloud basic */
-    .word-cloud { 
-      display: flex; 
-      flex-wrap: wrap; 
-      gap: 10px; 
-      align-items: center; 
+    /* Focus visible for keyboard users */
+    :focus{outline:none}
+    :focus-visible{outline:4px solid var(--focus-outline);outline-offset:3px}
+
+    /* Make borders more visible across elements that use utility border classes
+       This targets many Tailwind-style border-* class names pragmatically and
+       ensures a consistent outline colour on the very dark theme. */
+    [class*="border-"]{
+      border-color:var(--glass-border) !important;
     }
 
-    /* word cloud tooltip */
-    .word-tooltip {
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%) scale(0.85);
-      margin-bottom: 10px;
-      padding: 6px 16px 5px 16px;
-      background: #161616e6;
-      border: 1px solid #484848;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 0.03em;
-      white-space: nowrap;
-      box-shadow: 0 4px 24px 2px #000e, 0 0.5px 0.5px #2224;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.16s cubic-bezier(.6,.01,.58,1.02), transform 0.18s cubic-bezier(.35,2.4,.56,1.09);
-      z-index: 1000;
-    }
-    .word-tooltip.active {
-      opacity: 1;
-      transform: translateX(-50%) scale(1.05);
-    }
-    .word-tooltip::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 0;
-      height: 0;
-      border-left: 9px solid transparent;
-      border-right: 9px solid transparent;
-      border-top: 8px solid #161616e6;
-      filter: drop-shadow(0 2px 2px #000b);
+    /* Ensure rounded containers and card areas also show the stronger border */
+    .rounded-lg, .rounded-xl, header, footer, .glass, .badge, .p-3, .p-4, .p-5{
+      border-color:var(--glass-border) !important;
     }
 
-    /* cover image ratio */
-    .cover-img { 
-      width: 120px; 
-      height: 160px; 
-      object-fit: cover; 
-      border-radius: 12px;
-      border: 1px solid #1a1a1a;
-    }
+    /* Slightly stronger inner outline for cards for separation */
+    .glass{box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.02)}
 
-    /* small muted */
-    .muted { 
-      color: #666666; 
-      font-size: 0.875rem; 
-    }
-
-    /* smooth scrollbar */
-    ::-webkit-scrollbar { 
-      height: 8px; 
-      width: 8px; 
-    }
-    ::-webkit-scrollbar-track { 
-      background: #0a0a0a; 
-    }
-    ::-webkit-scrollbar-thumb { 
-      background: #2a2a2a; 
-      border-radius: 4px; 
-    }
-    ::-webkit-scrollbar-thumb:hover { 
-      background: #3a3a3a; 
-    }
-
-    /* clickable item hover */
-    .item-hover { 
-      transition: all 0.2s ease; 
-    }
-    .item-hover:hover { 
-      transform: translateY(-2px); 
-      background: #111111 !important;
-      border-color: #2a2a2a !important;
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.9); 
-    }
-
-    /* caption ellipsis */
-    .caption { 
-      display: -webkit-box; 
-      -webkit-line-clamp: 3; 
-      line-clamp: 3; 
-      -webkit-box-orient: vertical; 
-      overflow: hidden; 
-      text-overflow: ellipsis; 
-    }
-
-    /* badge */
-    .badge { 
-      background: #1a1a1a; 
-      color: #888888; 
-      padding: 4px 10px; 
-      border-radius: 6px; 
-      font-weight: 500; 
-      font-size: 0.75rem;
-      border: 1px solid #2a2a2a;
-    }
-
-    /* Input styling */
-    input {
-      background: #0a0a0a !important;
-      border-color: #1a1a1a !important;
-      color: #ffffff !important;
-    }
-
-    input:focus {
-      border-color: #3a3a3a !important;
-      background: #111111 !important;
-    }
-
-    input::placeholder {
-      color: #444444 !important;
-    }
-
-    /* Button styling */
-    button {
-      background: #1a1a1a !important;
-      border: 1px solid #2a2a2a !important;
-      color: #ffffff !important;
-      transition: all 0.2s ease;
-    }
-
-    button:hover {
-      background: #222222 !important;
-      border-color: #3a3a3a !important;
-      transform: translateY(-1px);
-    }
-
-    /* Section headers */
-    h1, h2, h3 {
-      color: #ffffff;
-    }
-
-    /* Links */
-    a {
-      color: #888888;
-      transition: color 0.2s ease;
-    }
-
-  a:hover {
-    color: #ffffff;
-  }
-  .mode-switch { display: inline-flex; border: 1px solid #1a1a1a; border-radius: 9999px; overflow: hidden; background: #0a0a0a; }
-  .mode-btn { padding: 6px 10px; font-size: .72rem; font-weight: 600; color: #bfbfbf !important; background: transparent !important; border: 0 !important; line-height: 1; }
-  .mode-btn + .mode-btn { border-left: 1px solid #1a1a1a; }
-  .mode-btn.active { color: #ffffff !important; background: #111111 !important; }
   </style>
 </head>
 <body class="min-h-screen flex flex-col">
@@ -210,10 +174,14 @@
           <h1 class="text-3xl font-bold mb-2 text-white">TikTok Repost Insights</h1>
           <p class="muted">Analyze your repost patterns, trends, and discover your favorite creators</p>
         </div>
-        <div class="text-right muted text-sm hidden md:block">
-          <div class="flex gap-2 justify-end">
-            <span class="badge">Dark Mode</span>
-            <span class="badge">Chart.js</span>
+        <div class="text-right muted text-sm">
+          <div class="flex items-center gap-2 justify-end">
+            <div class="hidden sm:flex gap-2">
+              <span class="badge">Chart.js</span>
+            </div>
+            <button id="themeToggle" class="glass" aria-pressed="false" title="Toggle theme" style="padding:8px;border-radius:10px;">
+              <span id="themeIcon">🌙</span>
+            </button>
           </div>
         </div>
       </div>
@@ -527,6 +495,21 @@ function buildWordCloud(words) {
     wordCloudEl.textContent = 'No words available';
     return;
   }
+  // ensure there's a global helper to close any open tooltips (used for mobile taps)
+  if (!window.__closeWordTooltips) {
+    window.__closeWordTooltips = function() {
+      document.querySelectorAll('.word-tooltip.active').forEach(t => t.classList.remove('active'));
+    };
+  }
+  if (!window.__wordTooltipOutsideHandlerAdded) {
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.word-cloud')) window.__closeWordTooltips();
+    }, { passive: true });
+    document.addEventListener('touchstart', (e) => {
+      if (!e.target.closest('.word-cloud')) window.__closeWordTooltips();
+    }, { passive: true });
+    window.__wordTooltipOutsideHandlerAdded = true;
+  }
   // get min and max to scale font sizes between 12px and 36px
   const values = words.map(w => w.value);
   const min = Math.min(...values);
@@ -553,6 +536,7 @@ function buildWordCloud(words) {
     tooltip.textContent = w.value;
     span.appendChild(tooltip);
     
+    // Hover for desktop
     span.onmouseenter = function() {
       this.style.background = '#111111';
       this.style.borderColor = '#2a2a2a';
@@ -563,6 +547,18 @@ function buildWordCloud(words) {
       this.style.borderColor = '#1a1a1a';
       tooltip.classList.remove('active');
     };
+    // Click / touch to toggle tooltip on mobile devices
+    span.addEventListener('click', function(e){
+      e.stopPropagation();
+      // close other tooltips first
+      window.__closeWordTooltips();
+      // toggle this tooltip
+      if (tooltip.classList.contains('active')) {
+        tooltip.classList.remove('active');
+      } else {
+        tooltip.classList.add('active');
+      }
+    }, { passive: true });
     wordCloudEl.appendChild(span);
   });
 }
@@ -572,6 +568,20 @@ function buildWordCloudInto(el, words) {
   if (!words || !words.length) {
     el.textContent = 'No words available';
     return;
+  }
+  if (!window.__closeWordTooltips) {
+    window.__closeWordTooltips = function() {
+      document.querySelectorAll('.word-tooltip.active').forEach(t => t.classList.remove('active'));
+    };
+  }
+  if (!window.__wordTooltipOutsideHandlerAdded) {
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.word-cloud')) window.__closeWordTooltips();
+    }, { passive: true });
+    document.addEventListener('touchstart', (e) => {
+      if (!e.target.closest('.word-cloud')) window.__closeWordTooltips();
+    }, { passive: true });
+    window.__wordTooltipOutsideHandlerAdded = true;
   }
   const values = words.map(w => w.value);
   const min = Math.min(...values);
@@ -604,6 +614,11 @@ function buildWordCloudInto(el, words) {
       this.style.borderColor = '#1a1a1a';
       tooltip.classList.remove('active');
     };
+    span.addEventListener('click', function(e){
+      e.stopPropagation();
+      window.__closeWordTooltips();
+      if (tooltip.classList.contains('active')) tooltip.classList.remove('active'); else tooltip.classList.add('active');
+    }, { passive: true });
     el.appendChild(span);
   });
 }
@@ -1103,6 +1118,29 @@ function computeOverlap(a, b) {
   overlap.sort((x, y) => y.value - x.value);
   return overlap.slice(0, 10);
 }
+
+/* Theme initialization & toggle */
+const themeToggle = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem('prefTheme', t); }catch(e){}
+  if(themeIcon) themeIcon.textContent = (t === 'dark') ? '🌙' : '☀️';
+  if(themeToggle) themeToggle.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
+}
+function initTheme(){
+  try{
+    const stored = localStorage.getItem('prefTheme');
+    if(stored) return applyTheme(stored);
+  }catch(e){}
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(prefersDark ? 'dark' : 'light');
+}
+themeToggle && themeToggle.addEventListener('click', ()=>{
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+initTheme();
 
 /* Attach events */
 fetchBtn.addEventListener('click', () => {
